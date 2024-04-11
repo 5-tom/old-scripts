@@ -1,0 +1,6 @@
+#!/bin/bash
+
+git fetch
+rel=$(git branch -a | grep release | sed -s 's/.*remote/remote/g' | fzf)
+echo "$rel"
+git merge "$rel"

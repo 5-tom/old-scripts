@@ -1,0 +1,11 @@
+#!/bin/bash
+
+json=$(sqlite3 $HOME/.local/share/newsboat/cache.db ".mode json" "select title,pubDate,content from rss_item where unread = 1")
+
+length=$(echo $json | jq ". | length")
+
+for i in $(seq 0 "$((length - 1))")
+do
+	title=$(echo "$json" | jq -r ".[$i] | .title")
+	echo "$json" | jq -r ".[$i] | .title,.pubDate,.content" > "$title".html
+done

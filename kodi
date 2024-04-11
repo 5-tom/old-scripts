@@ -1,0 +1,71 @@
+#!/bin/bash
+set -eu
+
+filename=$(find . -name "*.mp4" -o -name "*.mkv" -o -name "*.srt" | fzf -m --prompt="Select the files you want to rename (Press Esc to skip): ")
+
+test "$filename" &&
+echo "$filename" >> oldnames.txt
+
+echo "$filename" |\
+while read line
+do
+	[[ "$line" ]] || break
+	echo -n "Enter a new filename for "
+	echo -n $(basename "$line")
+	echo " (you must include the file extension) (Press Enter to skip):"
+	read -e newname < /dev/tty
+	case $newname in
+	"")
+		;;
+	*)
+# dirname "$line" must be in double quotes because of directories with spaces
+		outdir=$(dirname "$line")
+		mv -b "$line" "$outdir"/"$newname"
+		;;
+	esac
+done
+
+echo "Is your destination folder in /home or /media? (Type either home or media):"
+read -e dir
+
+case "$dir" in
+home)
+	outdir=$(find /home -type d | fzf --prompt="Select destination folder: ")
+	;;
+media)
+	outdir=$(find /media -type d | fzf --prompt="Select destination folder: ")
+	;;
+*)
+	echo "You can only pick home or media. Exiting..."
+	exit 1
+	;;
+esac
+
+# test if stdout after grepping mp4 or mkv has length
+move(){
+	extisfound=$(basename "$1" | grep "$2")
+	cutfilename=$(basename -s "$2" "$1")
+	test "$extisfound" &&
+	mkdir -p "$outdir"/"$cutfilename" &&
+# the spinner and cp -i conflict (carriage return issues)
+	cp -i "$1" "$outdir"/"$cutfilename" < /dev/tty
+}
+
+filename0=$(find . -name "*.mp4" -o -name "*.mkv" -o -name "*.srt" | fzf -m --prompt="Select the files you want to move: ")
+
+echo "$filename0" |\
+while read line
+do
+	[[ "$line" ]] || break
+	echo -n "Moving file: "
+	echo $(basename "$line")
+	move "$line" .mp4
+	move "$line" .mkv
+	move "$line" .srt
+	sync
+	echo ""
+done
+
+echo "Complete."
+
+# mount -o remount,rw /media/tom/OS/
